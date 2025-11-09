@@ -55,8 +55,9 @@ This document maps SRS requirements to code artifacts to maintain traceability.
   - Helper: `src/lib/notifications.ts`
 
 - FR-15, FR-16 (AI features)
-  - Existing AI flows: `src/ai/flows/*`, `src/ai/genkit.ts`
-  - Future API integration: `/api/ai` (to be added as needed)
+  - API: `src/app/api/ai/route.ts` (Gemini integration via `GEMINI_API_KEY`)
+  - Helpers: RBAC via `src/lib/auth.ts` (`authenticateRequest`, `requireRoles`)
+  - Status: Implemented — GET/POST support with external call to Gemini 1.5
 
 - FR-17, FR-18 (Dashboards & Exports)
   - API: `src/app/api/analytics/route.ts`
@@ -72,5 +73,5 @@ This document maps SRS requirements to code artifacts to maintain traceability.
 ## Notes
 
 - GridFS: For MVP, documents are stored directly in DB; Production should move to MongoDB GridFS as per SRS.
+- Dev Utilities: Demo seed endpoint added — `POST /api/dev/seed` (dev-only, Admin roles) creates default templates, a sample request, and a sample form to populate dashboards.
 - Redis: Token blacklist is in-memory fallback; production should configure Redis via `REDIS_URL`.
-
