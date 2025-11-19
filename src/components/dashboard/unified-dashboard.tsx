@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -21,7 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { REQUESTS, USERS } from '@/lib/data';
 import { Request, User, UserRoleAssignment } from '@/types';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, formatISO } from 'date-fns';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
 import {
@@ -32,8 +32,122 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import NewRequestDialog from '../requests/new-request-dialog';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type FilterType = 'all' | 'approvals' | 'allocations';
+
+// Transform API response to Request type
+function transformApiRequest(apiReq: any): Request {
+  // Extract creator info
+  const creator = apiReq.createdBy;
+  const creatorId = creator?._id ? String(creator._id) : String(apiReq.createdBy || '');
+  const creatorRoles = creator?.roles || [];
+  const creatorRoleNames = Array.isArray(creatorRoles) 
+    ? creatorRoles.map((r: any) => (typeof r === 'string' ? r : r.role))
+    : [];
+  
+  // Determine assignedBy display name
+  let assignedByName = creator?.name || 'N/A';
+  if (creatorRoleNames.includes('PMO Viewer')) {
+    assignedByName = 'PMO';
+  } else if (creatorRoleNames.includes('CEO NITI')) {
+    assignedByName = 'CEO NITI';
+  } else if (creatorRoleNames.includes('State Advisor')) {
+    assignedByName = creator?.name || 'State Advisor';
+  } else if (creatorRoleNames.includes('State YP')) {
+    assignedByName = creator?.name || 'State YP';
+  } else if (creatorRoleNames.includes('Division HOD')) {
+    assignedByName = creator?.name || 'Division HOD';
+  } else if (creatorRoleNames.includes('Division YP')) {
+    assignedByName = creator?.name || 'Division YP';
+  }
+  
+  return {
+    id: String(apiReq._id || apiReq.id),
+    title: apiReq.title || '',
+    description: apiReq.infoNeed || '',
+    createdBy: creatorId,
+    assignedBy: assignedByName, // Store the display name instead of ID
+    createdAt: apiReq.createdAt ? formatISO(new Date(apiReq.createdAt)) : formatISO(new Date()),
+    dueDate: apiReq.deadline ? formatISO(new Date(apiReq.deadline)) : apiReq.timeline ? formatISO(new Date(apiReq.timeline)) : formatISO(new Date()),
+    status: mapApiStatus(apiReq),
+    currentAssigneeId: String(apiReq.currentAssigneeId?._id || apiReq.currentAssigneeId || ''),
+    state: apiReq.targets?.states?.[0] || '',
+    division: apiReq.targets?.branches?.[0] || '',
+    flowDirection: 'down', // Default, can be determined from status/history
+    targets: apiReq.targets || { states: [], branches: [], domains: [] }, // Include full targets object
+    divisionAssignments: (apiReq.divisionAssignments || []).map((a: any) => ({
+      division: a.division || '',
+      divisionHODId: String(a.divisionHODId?._id || a.divisionHODId || ''),
+      divisionYPId: a.divisionYPId ? String(a.divisionYPId._id || a.divisionYPId) : undefined,
+      status: a.status || 'pending',
+      approvedAt: a.approvedAt ? formatISO(new Date(a.approvedAt)) : undefined,
+      deadline: a.deadline ? formatISO(new Date(a.deadline)) : undefined,
+    })),
+    auditTrail: (apiReq.history || []).map((h: any, idx: number) => ({
+      id: `aud-${apiReq._id}-${idx}`,
+      timestamp: h.timestamp ? formatISO(new Date(h.timestamp)) : formatISO(new Date()),
+      userId: String(h.userId?._id || h.userId || ''),
+      userName: h.userId?.name || h.userId?.email || undefined, // Include user name if populated
+      userRoles: h.userId?.roles || undefined, // Include user roles if populated
+      action: h.action || '',
+      notes: h.notes || '',
+    })),
+  };
+}
+
+// Determine status based on current assignee role and workflow state
+function mapApiStatus(apiReq: any): Request['status'] {
+  const status = apiReq.status || 'open';
+  
+  // If completed or rejected, return those
+  if (status === 'approved' || status === 'closed') return 'Completed';
+  if (status === 'rejected') return 'Rejected';
+  
+  // Get assignee role if available
+  const assignee = apiReq.currentAssigneeId;
+  const assigneeRoles = assignee?.roles || [];
+  const assigneeRoleNames = Array.isArray(assigneeRoles) 
+    ? assigneeRoles.map((r: any) => (typeof r === 'string' ? r : r.role))
+    : [];
+  
+  // Determine status based on current assignee role
+  if (assigneeRoleNames.includes('CEO NITI')) {
+    return 'Pending CEO Review';
+  } else if (assigneeRoleNames.includes('State Advisor')) {
+    return 'Pending State Advisor';
+  } else if (assigneeRoleNames.includes('State YP')) {
+    return 'Pending State YP';
+  } else if (assigneeRoleNames.includes('Division HOD')) {
+    return 'Pending Division HOD';
+  } else if (assigneeRoleNames.includes('Division YP')) {
+    return 'Pending Division YP';
+  }
+  
+  // If no assignee yet, check history to determine next level
+  const history = apiReq.history || [];
+  const lastAction = history[history.length - 1];
+  
+  // If just created by PMO, it should go to CEO
+  if (history.length === 1 && lastAction?.action === 'created') {
+    return 'Pending CEO Review';
+  }
+  
+  // Check history for workflow progression
+  if (status === 'in-progress') {
+    const hasFanout = history.some((h: any) => h.action === 'fanout');
+    if (hasFanout) {
+      return 'Pending Division HOD';
+    }
+  }
+  
+  // Default: if open and no assignee, it's waiting for CEO
+  if (!assignee || assigneeRoleNames.length === 0) {
+    return 'Pending CEO Review';
+  }
+  
+  return 'Pending Division YP'; // Fallback
+}
 
 export default function UnifiedDashboard() {
   const { user, hasRole } = useAuth();
@@ -41,6 +155,39 @@ export default function UnifiedDashboard() {
   const [stateFilter, setStateFilter] = useState<string>('all');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [divisionFilter, setDivisionFilter] = useState<string>('all');
+  const [apiRequests, setApiRequests] = useState<Request[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const fetchRequests = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/workflows');
+      if (response.ok) {
+        const data = await response.json();
+        const transformed = Array.isArray(data) ? data.map(transformApiRequest) : [];
+        setApiRequests(transformed);
+      } else {
+        // Fallback to mock data on error
+        setApiRequests([]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch requests:', error);
+      setApiRequests([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchRequests();
+    }
+  }, [user, refreshKey]);
+
+  const handleRequestCreated = () => {
+    setRefreshKey(prev => prev + 1);
+  };
 
   const userAssignments = useMemo(() => {
     if (!user) return { states: [], roles: [], divisions: [] };
@@ -59,13 +206,34 @@ export default function UnifiedDashboard() {
     }
   }, [user]);
 
-  const findUserName = (userId: string) =>
-    USERS.find(u => u.id === userId)?.name ?? 'N/A';
+  const findUserName = (userIdOrName: string) => {
+    // If it's already a name (from transformApiRequest), return it
+    if (userIdOrName && !userIdOrName.match(/^[0-9a-f]{24}$/i)) {
+      return userIdOrName;
+    }
+    // Try to find in mock users first
+    const mockUser = USERS.find(u => u.id === userIdOrName);
+    if (mockUser) return mockUser.name;
+    // For API users, return the ID or 'N/A'
+    return userIdOrName || 'N/A';
+  };
+
+  // Combine API requests with mock requests (for demo/fallback)
+  const allRequests = useMemo(() => {
+    const combined = [...apiRequests];
+    // Add mock requests that aren't already in API requests
+    REQUESTS.forEach(mockReq => {
+      if (!combined.find(r => r.id === mockReq.id)) {
+        combined.push(mockReq);
+      }
+    });
+    return combined;
+  }, [apiRequests]);
 
   const myTasks = useMemo(() => {
     if (!user) return [];
     
-    return REQUESTS.filter(r => {
+    return allRequests.filter(r => {
         // Super Admin and CEO NITI can see everything if no filter is applied
         if ((hasRole('Super Admin') || hasRole('CEO NITI')) && stateFilter === 'all' && divisionFilter === 'all') {
              return true;
@@ -82,7 +250,40 @@ export default function UnifiedDashboard() {
         }
 
         // Check if the current user is assigned this task based on their roles
-        const isAssignee = r.currentAssigneeId === user.id;
+        // For Division HOD/YP, also check divisionAssignments
+        let isAssignee = r.currentAssigneeId === user.id;
+        
+        // If user is Division HOD or Division YP, check if their division is in assignments
+        // Each division works independently, so check if this user's division has an assignment
+        if (!isAssignee && (hasRole('Division HOD') || hasRole('Division YP'))) {
+          const userDivision = user.roles.find((role: any) => 
+            (role.role === 'Division HOD' || role.role === 'Division YP') && 
+            role.state === r.state
+          )?.division;
+          
+          if (userDivision && r.divisionAssignments) {
+            const assignment = r.divisionAssignments.find((a: any) => 
+              a.division === userDivision
+            );
+            
+            if (assignment) {
+              // Check if this user is the HOD or YP for this division
+              const isHOD = hasRole('Division HOD') && assignment.divisionHODId === user.id;
+              const isYP = hasRole('Division YP') && assignment.divisionYPId === user.id;
+              
+              if (isHOD) {
+                // Division HOD should see it if:
+                // - First pass: status is 'pending' (not yet approved/forwarded)
+                // - Second pass: status is 'yp_submitted' (YP has submitted form back)
+                isAssignee = assignment.status === 'pending' || assignment.status === 'yp_submitted';
+              } else if (isYP) {
+                // Division YP should see it if:
+                // - Status is 'hod_approved' (HOD has approved and forwarded to them)
+                isAssignee = assignment.status === 'hod_approved';
+              }
+            }
+          }
+        }
 
         // If a role filter is applied, check if the user has that role for the request's context
         if (roleFilter !== 'all') {
@@ -97,7 +298,7 @@ export default function UnifiedDashboard() {
         return isAssignee;
     });
 
-  }, [user, stateFilter, roleFilter, divisionFilter, hasRole]);
+  }, [user, stateFilter, roleFilter, divisionFilter, hasRole, allRequests]);
 
   const filteredTasks = useMemo(() => {
     return myTasks.filter(task => {
@@ -195,7 +396,7 @@ export default function UnifiedDashboard() {
               A unified view of all your pending approvals and allocated tasks.
             </CardDescription>
           </div>
-          {hasRole('PMO Viewer') && <NewRequestDialog />}
+          {hasRole('PMO Viewer') && <NewRequestDialog onRequestCreated={handleRequestCreated} />}
         </div>
         <div className="flex flex-col md:flex-row gap-4 pt-4">
           <div className="flex-1">
@@ -213,12 +414,12 @@ export default function UnifiedDashboard() {
           <div className="flex-1">
             <Select value={stateFilter} onValueChange={setStateFilter} disabled={userAssignments.states.length <= 1}>
               <SelectTrigger>
-                <SelectValue placeholder="Filter by State" />
+                <SelectValue placeholder="Filter by State/UT" />
               </SelectTrigger>
               <SelectContent>
                 {userAssignments.states.map(state => (
                   <SelectItem key={state} value={state}>
-                    {state === 'all' ? 'All States' : state}
+                    {state === 'all' ? 'All States/UTs' : state}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -254,7 +455,17 @@ export default function UnifiedDashboard() {
           </div>
         </div>
       </CardHeader>
-      <CardContent>{renderTaskList(filteredTasks)}</CardContent>
+      <CardContent>
+        {isLoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
+        ) : (
+          renderTaskList(filteredTasks)
+        )}
+      </CardContent>
     </Card>
   );
 }

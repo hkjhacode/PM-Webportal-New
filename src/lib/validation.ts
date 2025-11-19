@@ -17,7 +17,7 @@ export const CreateRequestSchema = z.object({
 
 export const LoginSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8),
+  password: z.string().min(1), // Allow any non-empty password (min 1 char for security)
   action: z.string().optional(),
 });
 

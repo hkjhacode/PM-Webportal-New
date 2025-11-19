@@ -80,7 +80,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/api/auth/session', { method: 'GET' });
+        const res = await fetch('/api/auth/session', { 
+          method: 'GET',
+          credentials: 'include', // Ensure cookies are sent
+        });
         if (res.ok) {
           const data = await res.json();
           if (!cancelled && data.user) {
@@ -92,9 +95,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               avatarUrl: data.user.avatarUrl ?? 'https://picsum.photos/seed/100/100',
             };
             setUser(userFromApi);
+          } else if (!cancelled && res.status === 401) {
+            // No valid session, user is not logged in
+            setUser(null);
           }
+        } else if (res.status === 401) {
+          // No valid session
+          if (!cancelled) setUser(null);
         }
-      } catch {}
+      } catch (error) {
+        // Network error or API unavailable - try mock fallback
+        console.warn('Session check failed, user will need to login again');
+        if (!cancelled) setUser(null);
+      }
       if (!cancelled) setInitialized(true);
     })();
     return () => { cancelled = true };

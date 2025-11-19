@@ -37,8 +37,19 @@ export type AuditLog = {
   id: string;
   timestamp: string; // ISO string
   userId: string;
+  userName?: string; // User name if available
+  userRoles?: any[]; // User roles if available
   action: string; // e.g., "Created Request", "Submitted Data", "Approved"
   notes?: string;
+};
+
+export type DivisionAssignment = {
+  division: string;
+  divisionHODId: string;
+  divisionYPId?: string;
+  status: 'pending' | 'hod_approved' | 'yp_submitted' | 'hod_approved_form' | 'completed';
+  approvedAt?: string;
+  deadline?: string; // Per-division deadline (ISO string)
 };
 
 export type Request = {
@@ -58,5 +69,11 @@ export type Request = {
   };
   auditTrail: AuditLog[];
   flowDirection: 'up' | 'down'; // 'up' for approval, 'down' for allocation
-  assignedBy: string; // userId of who assigned it
+  assignedBy: string; // userId or name of who assigned it
+  targets?: {
+    states: string[];
+    branches: string[];
+    domains: string[];
+  };
+  divisionAssignments?: DivisionAssignment[]; // Per-division assignments for modular workflow
 };

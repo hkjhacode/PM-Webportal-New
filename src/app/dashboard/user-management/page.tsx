@@ -136,12 +136,35 @@ export default function UserManagementPage() {
     }
   };
 
-  const handleDeleteUser = () => {
-    toast({
-        variant: 'destructive',
-        title: 'User Deleted',
-        description: 'The user has been successfully deleted.',
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      const res = await fetch(`/api/users/${userId}`, { 
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
       });
+      const data = await res.json();
+      if (res.ok) {
+        // Remove user from local state
+        setUsers(prev => prev.filter(u => u.id !== userId));
+        toast({
+          variant: 'default',
+          title: 'User Deleted',
+          description: 'The user has been successfully deleted.',
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Delete Failed',
+          description: data.error || 'Could not delete user.',
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Network Error',
+        description: 'Could not delete user. Please try again.',
+      });
+    }
   }
 
   const handleResetDevUsers = async () => {
@@ -376,7 +399,7 @@ export default function UserManagementPage() {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleDeleteUser} className="bg-destructive hover:bg-destructive/90">
+                            <AlertDialogAction onClick={() => handleDeleteUser(u.id)} className="bg-destructive hover:bg-destructive/90">
                                 Continue
                             </AlertDialogAction>
                             </AlertDialogFooter>
@@ -430,7 +453,7 @@ export default function UserManagementPage() {
                         {newRole && stateSpecificRoles.includes(newRole) && (
                              <Select value={newState} onValueChange={setNewState}>
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Select State" />
+                                    <SelectValue placeholder="Select State/UT" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {STATES.map(st => (
@@ -440,16 +463,19 @@ export default function UserManagementPage() {
                             </Select>
                         )}
                         {newRole && divisionSpecificRoles.includes(newRole) && (
-                            <Select value={newDivision} onValueChange={setNewDivision}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select Division" />
-                                </SelectTrigger>
-                                <SelectContent>
+                            <>
+                                <Input 
+                                    value={newDivision} 
+                                    onChange={(e) => setNewDivision(e.target.value)}
+                                    placeholder="Enter Division (e.g., Education, Health)" 
+                                    list="divisions-list"
+                                />
+                                <datalist id="divisions-list">
                                     {DIVISIONS.map(div => (
-                                        <SelectItem key={div} value={div}>{div}</SelectItem>
+                                        <option key={div} value={div} />
                                     ))}
-                                </SelectContent>
-                            </Select>
+                                </datalist>
+                            </>
                         )}
                     </div>
                     <div className="pt-2">

@@ -23,6 +23,22 @@ const TargetsSchema = new Schema(
   { _id: false }
 );
 
+const DivisionAssignmentSchema = new Schema(
+  {
+    division: { type: String, required: true },
+    divisionHODId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    divisionYPId: { type: Schema.Types.ObjectId, ref: 'User' },
+    status: {
+      type: String,
+      enum: ['pending', 'hod_approved', 'yp_submitted', 'hod_approved_form', 'completed'],
+      default: 'pending',
+    },
+    approvedAt: { type: Date },
+    deadline: { type: Date }, // Per-division deadline (can be different for each division)
+  },
+  { _id: false }
+);
+
 const WorkflowRequestSchema = new Schema(
   {
     title: { type: String, required: true },
@@ -38,8 +54,9 @@ const WorkflowRequestSchema = new Schema(
     targets: { type: TargetsSchema, required: true },
     history: { type: [HistorySchema], default: [] },
     currentAssigneeId: { type: Schema.Types.ObjectId, ref: 'User' },
+    divisionAssignments: { type: [DivisionAssignmentSchema], default: [] }, // Track per-division assignments
   },
-  { timestamps: true }
+  { timestamps: true, strictPopulate: false }
 );
 
 export type WorkflowRequestDoc = mongoose.InferSchemaType<typeof WorkflowRequestSchema> & {

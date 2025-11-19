@@ -25,7 +25,7 @@ export function SidebarNav() {
             href: '/dashboard/requests',
             label: 'All Requests',
             icon: FileText,
-            roles: ['CEO NITI', 'PMO Viewer', 'State Advisor'],
+            roles: ['CEO NITI', 'PMO Viewer', 'State Advisor', 'State YP', 'Division HOD', 'Division YP'],
         },
         {
             href: '/dashboard/analytics',

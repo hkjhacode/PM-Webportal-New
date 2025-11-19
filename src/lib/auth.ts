@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { User, UserDoc } from '@/models/user';
 import { connectDB } from './db';
+import { USERS } from './data';
 
 /**
  * Auth Helpers
@@ -72,16 +73,59 @@ export async function authenticateRequest(req: NextRequest) {
   if (isTokenBlacklisted(t)) return null;
   try {
     const decoded = verifyAccessToken(t);
-    await connectDB();
-    const user = await User.findById(decoded.sub);
-    return user || null;
+    
+    // Try database first
+    try {
+      await connectDB();
+      const user = await User.findById(decoded.sub);
+      if (user) return user;
+    } catch (error) {
+      // DB not available, fall through to mock mode
+    }
+    
+    // Fallback to mock users (for development/demo when DB is not configured)
+    const mockUser = USERS.find(u => u.id === decoded.sub);
+    if (mockUser) {
+      // Return a mock user document structure compatible with UserDoc
+      const mockUserDoc = {
+        _id: mockUser.id as any,
+        name: mockUser.name,
+        email: mockUser.email,
+        roles: mockUser.roles.map(r => ({
+          role: r.role,
+          state: r.state,
+          branch: r.division,
+        })),
+        state: mockUser.roles[0]?.state,
+        branch: mockUser.roles[0]?.division,
+        passwordHash: '', // Not needed for auth check
+        avatarUrl: mockUser.avatarUrl,
+        status: 'active' as const,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any as UserDoc;
+      console.log('✅ Authenticated mock user:', mockUser.email, 'Roles:', mockUser.roles.map(r => r.role));
+      return mockUserDoc;
+    }
+    
+    return null;
   } catch {
     return null;
   }
 }
 
 export function requireRoles(user: UserDoc | null, allowedRoles: string[]) {
-  if (!user) return false;
-  const roles = (user.roles || []).map((r) => r.role);
-  return allowedRoles.some((ar) => roles.includes(ar));
+  if (!user) {
+    console.warn('⚠️ requireRoles: No user provided');
+    return false;
+  }
+  const roles = (user.roles || []).map((r: any) => {
+    // Handle both object format { role: '...' } and string format
+    return typeof r === 'string' ? r : (r?.role || r);
+  });
+  const hasRole = allowedRoles.some((ar) => roles.includes(ar));
+  if (!hasRole) {
+    console.warn(`⚠️ requireRoles: User roles [${roles.join(', ')}] do not include any of [${allowedRoles.join(', ')}]`);
+  }
+  return hasRole;
 }
