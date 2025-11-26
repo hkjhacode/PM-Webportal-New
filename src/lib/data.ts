@@ -7,8 +7,8 @@ export const USERS: User[] = [
     id: 'user-0',
     name: 'Super Admin',
     roles: [{ role: 'Super Admin' }],
-    email: 'superadmin@niti.gov.in',
-    password: 'SuperAdmin@123',
+    email: 'superadmin@gov.in',
+    password: 'Admin@123',
     avatarUrl: 'https://picsum.photos/seed/0/100/100',
   },
   {
