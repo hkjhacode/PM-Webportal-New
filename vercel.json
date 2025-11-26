@@ -3,10 +3,5 @@
   "devCommand": "next dev --turbopack -p 9002",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "regions": ["bom1"],
-  "env": {
-    "MONGODB_URI": "@mongodb_uri",
-    "JWT_SECRET": "@jwt_secret",
-    "GEMINI_API_KEY": "@gemini_api_key"
-  }
+  "regions": ["bom1"]
 }
