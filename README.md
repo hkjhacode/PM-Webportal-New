@@ -1,18 +1,18 @@
-# 🚀 HierarchyFlow - Execution Ready Implementation
+# 🚀 VisitWise - Production Deployment
 
-**✅ Status: OPERATIONAL** | **📍 Server: http://localhost:9002** | **🕒 Last Updated: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")**
+**✅ Status: PRODUCTION DEPLOYED** | **📍 Vercel: https://pmportal-o79jytzn2-jaishreesitaramhanumans-projects.vercel.app/** | **🕒 Last Updated: 2025-11-27**
 
-Implements all 16 core SRS requirements: authentication, workflows, templates, forms, merge, notifications, document generation, and analytics.
+Implements all core SRS requirements: authentication, workflows, templates, forms, merge, notifications, and document generation.
 
-## 📊 Execution Summary
+## 📊 Production Status
 
 | Component | Status | Performance | Notes |
 |-----------|--------|-------------|-------|
-| **Build Process** | ✅ PASSED | 9s compile | Clean build with exit code 0 |
-| **Development Server** | ✅ RUNNING | 2.8s startup | Turbopack enabled |
-| **Authentication** | ⚠️ MOCK MODE | 10s timeout | Fallback to client-side auth |
-| **API Endpoints** | ✅ 9/9 ACTIVE | <1s response | All routes compiled |
-| **Frontend** | ✅ ACCESSIBLE | Instant load | Preview available |
+| **Build Process** | ✅ DEPLOYED | Vercel Auto-build | Production optimized |
+| **Production Server** | ✅ LIVE | Global CDN | Hosted on Vercel |
+| **Authentication** | ✅ ACTIVE | JWT + MongoDB | Production database |
+| **API Endpoints** | ✅ 9/9 ACTIVE | <1s response | All routes deployed |
+| **Frontend** | ✅ LIVE | Global CDN | Fully accessible |
 
 ---
 
@@ -37,9 +37,10 @@ npm run dev
 
 ### **Step 3: Access Application**
 ```
-🌐 Frontend: http://localhost:9002
-📡 API Base: http://localhost:9002/api
-🔧 Development: Turbopack compilation active
+🌐 Production URL: https://pmportal-o79jytzn2-jaishreesitaramhanumans-projects.vercel.app/
+🌐 Short Link: https://bit.ly/pm-portal
+📡 API Base: https://pmportal-o79jytzn2-jaishreesitaramhanumans-projects.vercel.app/api
+🔧 Local Dev: http://localhost:9002 (for development)
 ```
 
 ---
@@ -53,13 +54,13 @@ npm run dev
 - **Mode:** Development with Turbopack ✅
 
 ### **Database Status**
-- **MongoDB:** ⚠️ Not configured (Mock mode active)
-- **Impact:** Limited to demo authentication
-- **Resolution:** Set MONGODB_URI environment variable
+- **MongoDB:** ✅ MongoDB Atlas (M0 Cluster)
+- **Database:** `visitwise` (production)
+- **Status:** Fully configured and operational
 
 ### **Available API Endpoints**
 ```
-✅ POST /api/auth          - Authentication (with fallback)
+✅ POST /api/auth          - Authentication
 ✅ POST /api/workflows     - Workflow management
 ✅ GET  /api/workflows     - Request listing
 ✅ PATCH /api/workflows    - Approval/rejection
@@ -70,7 +71,7 @@ npm run dev
 ✅ POST /api/merge         - Form consolidation
 ✅ POST /api/docs          - Document generation
 ✅ POST /api/notifications - Alert system
-✅ GET  /api/analytics     - Dashboard data
+✅ GET  /api/users         - User management (Super Admin)
 ```
 
 ---
@@ -252,12 +253,13 @@ See `docs/traceability.md` mapping SRS FRs to code artifacts.
 
 ---
 
-## 🚀 Live Demo
+## 🚀 Live Production Deployment
 
-**Deployed on Vercel (Manual Deploy)**
-👉 [https://visit-wise-tau.vercel.app](https://visit-wise-tau.vercel.app) *(Demo – UI prototype only)*
+**Deployed on Vercel**
+👉 **Primary URL:** [https://pmportal-o79jytzn2-jaishreesitaramhanumans-projects.vercel.app/](https://pmportal-o79jytzn2-jaishreesitaramhanumans-projects.vercel.app/)
+👉 **Short Link:** [https://bit.ly/pm-portal](https://bit.ly/pm-portal)
 
-> Login with demo credentials (see Quick Start below)
+> Login with production credentials (see Credentials section below)
 
 ---
 
@@ -271,7 +273,6 @@ See `docs/traceability.md` mapping SRS FRs to code artifacts.
 | 📄 **Document Generation**                 | DOCX/PDF preview/export (Govt. style letterheads)               | `docx-templates` + Puppeteer   |
 | 🔔 **Alert & Escalation System**           | Email, SMS, in-app notifications                                | SendGrid + Twilio (Free Tiers) |
 | 🤖 **AI Insights**                         | Summarize deficits, generate reform suggestions                 | Gemini API                     |
-| 📊 **Analytics Dashboards**                | Role-based progress heatmaps and overdue tracking               | Recharts + Next.js SSR         |
 | 💾 **Storage**                             | Document & form storage                                         | MongoDB Atlas + GridFS         |
 | 🌱 **Hosting**                             | Fully serverless setup                                          | Vercel (Manual deploys)        |
 
@@ -380,13 +381,25 @@ npm run dev
 
 > App runs at: [http://localhost:3000](http://localhost:3000)
 
-### 5. Demo Credentials (example)
+### 5. Production Credentials
 
-| Role          | Username     | Password  |
-| ------------- | ------------ | --------- |
-| PMO           | pmo_demo     | pmo@123   |
-| State Advisor | advisor_demo | state@123 |
-| Div YP        | yp_demo      | yp@123    |
+**Deployment URLs:**
+- **Primary:** https://pmportal-o79jytzn2-jaishreesitaramhanumans-projects.vercel.app/
+- **Short Link:** https://bit.ly/pm-portal
+
+**User Accounts:**
+
+| Role | Email | Password |
+|------|-------|----------|
+| **Super Admin** | superadmin@gov.in | Admin@123 |
+| **PMO Viewer** | pmo@gov.in | PMO@123 |
+| **CEO NITI** | ceo.niti@gov.in | Ceo@123 |
+| **State Advisor (Delhi)** | harsh@niti.gov.in | jT2akJML35 |
+| **State YP (Delhi)** | harsh2@niti.gov.in | j05cmgkF8W |
+| **Division HOD (Education, Delhi)** | harsh3@niti.gov.in | kQgnaAsk5t |
+| **Division YP (Education)** | harsh4@niti.gov.in | 0aBhmmaBmb |
+
+> **Note:** These are production credentials. Super Admin has full access to user management.
 
 ---
 
@@ -400,8 +413,8 @@ npm run dev
 | Forms          | `/api/forms`     | Submit & validate domain-specific forms    |
 | Alerts         | `/api/alerts`    | Cron-based email/SMS reminders             |
 | Reports        | `/api/reports`   | Generate and preview DOCX/PDF              |
-| Analytics      | `/api/analytics` | Dashboard metrics and exports              |
 | AI             | `/api/ai`        | Query Gemini API for summaries/suggestions |
+| Users          | `/api/users`     | User management (Super Admin only)         |
 
 ---
 
