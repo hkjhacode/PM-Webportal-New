@@ -45,17 +45,27 @@ export function RequestView({ request }: RequestViewProps) {
     const [divisionForm, setDivisionForm] = useState<any>(null);
     const [isCheckingForm, setIsCheckingForm] = useState(false);
     
+    // Determine user's division if applicable (lifted to top scope for use in renderActionPanel)
+    const userDivision = user?.roles?.find((role: any) => 
+        (role.role === 'Division HOD' || role.role === 'Division YP') && 
+        role.state === request.state
+    )?.division;
+
+    // Determine division-specific deadline if applicable
+    let divisionDeadline: string | undefined = undefined;
+    if (userDivision && request.divisionAssignments) {
+        const assignment = request.divisionAssignments.find((a: any) => a.division === userDivision);
+        if (assignment?.deadline) {
+            divisionDeadline = assignment.deadline;
+        }
+    }
+
     // Check if user is assigned - either directly or through division assignment
     let isAssignee = user?.id === request.currentAssigneeId;
     
     // For Division HOD/YP, also check divisionAssignments
     // Each division works independently, so check if this user's division has an assignment
     if (!isAssignee && user && (hasRole('Division HOD') || hasRole('Division YP'))) {
-      const userDivision = user.roles?.find((role: any) => 
-        (role.role === 'Division HOD' || role.role === 'Division YP') && 
-        role.state === request.state
-      )?.division;
-      
       if (userDivision && request.divisionAssignments) {
         const assignment = request.divisionAssignments.find((a: any) => 
           a.division === userDivision
