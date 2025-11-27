@@ -385,6 +385,22 @@ export function RequestView({ request }: RequestViewProps) {
     };
     
     const renderActionPanel = () => {
+        console.log('RequestView renderActionPanel v2'); // Debug log to confirm deployment
+        
+        // Re-calculate variables locally to ensure they are in scope (fixing ReferenceError)
+        const panelUserDivision = user?.roles?.find((role: any) => 
+            (role.role === 'Division HOD' || role.role === 'Division YP') && 
+            role.state === request.state
+        )?.division;
+
+        let panelDivisionDeadline: string | undefined = undefined;
+        if (panelUserDivision && request.divisionAssignments) {
+            const assignment = request.divisionAssignments.find((a: any) => a.division === panelUserDivision);
+            if (assignment?.deadline) {
+                panelDivisionDeadline = assignment.deadline;
+            }
+        }
+
         if (!isAssignee || request.status === 'Completed' || request.status === 'Rejected') {
             return null;
         }
@@ -516,10 +532,10 @@ export function RequestView({ request }: RequestViewProps) {
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            {(divisionDeadline || request.dueDate) && (
+                            {(panelDivisionDeadline || request.dueDate) && (
                                 <div className="p-3 bg-muted rounded-lg">
-                                    <p className="text-sm font-semibold">Current Deadline{userDivision ? ` for ${userDivision}` : ''} (set by previous user)</p>
-                                    <p className="text-lg">{format(parseISO(divisionDeadline || request.dueDate), 'PPP p')}</p>
+                                    <p className="text-sm font-semibold">Current Deadline{panelUserDivision ? ` for ${panelUserDivision}` : ''} (set by previous user)</p>
+                                    <p className="text-lg">{format(parseISO(panelDivisionDeadline || request.dueDate), 'PPP p')}</p>
                                 </div>
                             )}
                             <Textarea 
@@ -536,7 +552,7 @@ export function RequestView({ request }: RequestViewProps) {
                                         value={revisedDeadline}
                                         onChange={(e) => setRevisedDeadline(e.target.value)}
                                         min={new Date().toISOString().slice(0, 16)}
-                                        max={(divisionDeadline || request.dueDate) ? new Date(divisionDeadline || request.dueDate).toISOString().slice(0, 16) : undefined}
+                                        max={(panelDivisionDeadline || request.dueDate) ? new Date(panelDivisionDeadline || request.dueDate).toISOString().slice(0, 16) : undefined}
                                     />
                                     <p className="text-xs text-muted-foreground">
                                         Leave empty to keep the same deadline, or select an earlier date to reduce it.
@@ -581,9 +597,9 @@ export function RequestView({ request }: RequestViewProps) {
                         <CardTitle>Review & Merge</CardTitle>
                         <CardDescription>
                             Review all division submissions and merge them before forwarding to State Advisor.
-                            {(divisionDeadline || request.dueDate) && (
+                            {(panelDivisionDeadline || request.dueDate) && (
                                 <span className="block mt-2 text-sm font-semibold">
-                                    Current Deadline: {format(parseISO(divisionDeadline || request.dueDate), 'PPP p')}
+                                    Current Deadline: {format(parseISO(panelDivisionDeadline || request.dueDate), 'PPP p')}
                                 </span>
                             )}
                         </CardDescription>
@@ -652,10 +668,10 @@ export function RequestView({ request }: RequestViewProps) {
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            {(divisionDeadline || request.dueDate) && (
+                            {(panelDivisionDeadline || request.dueDate) && (
                                 <div className="p-3 bg-muted rounded-lg">
-                                    <p className="text-sm font-semibold">Current Deadline{userDivision ? ` for ${userDivision}` : ''} (set by previous user)</p>
-                                    <p className="text-lg">{format(parseISO(divisionDeadline || request.dueDate), 'PPP p')}</p>
+                                    <p className="text-sm font-semibold">Current Deadline{panelUserDivision ? ` for ${panelUserDivision}` : ''} (set by previous user)</p>
+                                    <p className="text-lg">{format(parseISO(panelDivisionDeadline || request.dueDate), 'PPP p')}</p>
                                 </div>
                             )}
                             <Textarea 
@@ -672,7 +688,7 @@ export function RequestView({ request }: RequestViewProps) {
                                         value={revisedDeadline}
                                         onChange={(e) => setRevisedDeadline(e.target.value)}
                                         min={new Date().toISOString().slice(0, 16)}
-                                        max={(divisionDeadline || request.dueDate) ? new Date(divisionDeadline || request.dueDate).toISOString().slice(0, 16) : undefined}
+                                        max={(panelDivisionDeadline || request.dueDate) ? new Date(panelDivisionDeadline || request.dueDate).toISOString().slice(0, 16) : undefined}
                                     />
                                     <p className="text-xs text-muted-foreground">
                                         Leave empty to keep the same deadline, or select an earlier date to reduce it.
@@ -743,18 +759,18 @@ export function RequestView({ request }: RequestViewProps) {
                             <CardTitle>Approve & Forward</CardTitle>
                             <CardDescription>
                                 Approve this request and forward it to Division YP for document creation.
-                                {(divisionDeadline || request.dueDate) && (
+                                {(panelDivisionDeadline || request.dueDate) && (
                                     <span className="block mt-2 text-sm font-semibold text-muted-foreground">
-                                        Current Deadline{userDivision ? ` for ${userDivision}` : ''}: {format(parseISO(divisionDeadline || request.dueDate), 'PPP p')}
+                                        Current Deadline{panelUserDivision ? ` for ${panelUserDivision}` : ''}: {format(parseISO(panelDivisionDeadline || request.dueDate), 'PPP p')}
                                     </span>
                                 )}
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            {(divisionDeadline || request.dueDate) && (
+                            {(panelDivisionDeadline || request.dueDate) && (
                                 <div className="p-3 bg-muted rounded-lg">
-                                    <p className="text-sm font-semibold">Current Deadline{userDivision ? ` for ${userDivision}` : ''} (set by previous user)</p>
-                                    <p className="text-lg">{format(parseISO(divisionDeadline || request.dueDate), 'PPP p')}</p>
+                                    <p className="text-sm font-semibold">Current Deadline{panelUserDivision ? ` for ${panelUserDivision}` : ''} (set by previous user)</p>
+                                    <p className="text-lg">{format(parseISO(panelDivisionDeadline || request.dueDate), 'PPP p')}</p>
                                 </div>
                             )}
                             <Textarea 
@@ -771,7 +787,7 @@ export function RequestView({ request }: RequestViewProps) {
                                         value={revisedDeadline}
                                         onChange={(e) => setRevisedDeadline(e.target.value)}
                                         min={new Date().toISOString().slice(0, 16)}
-                                        max={(divisionDeadline || request.dueDate) ? new Date(divisionDeadline || request.dueDate).toISOString().slice(0, 16) : undefined}
+                                        max={(panelDivisionDeadline || request.dueDate) ? new Date(panelDivisionDeadline || request.dueDate).toISOString().slice(0, 16) : undefined}
                                     />
                                     <p className="text-xs text-muted-foreground">
                                         Leave empty to keep the same deadline, or select an earlier date to reduce it.
@@ -812,10 +828,10 @@ export function RequestView({ request }: RequestViewProps) {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {divisionDeadline && (
+                    {panelDivisionDeadline && (
                         <div className="p-3 bg-muted rounded-lg">
-                            <p className="text-sm font-semibold">Current Deadline for {userDivision || 'this division'} (set by previous user)</p>
-                            <p className="text-lg">{format(parseISO(divisionDeadline), 'PPP p')}</p>
+                            <p className="text-sm font-semibold">Current Deadline for {panelUserDivision || 'this division'} (set by previous user)</p>
+                            <p className="text-lg">{format(parseISO(panelDivisionDeadline), 'PPP p')}</p>
                         </div>
                     )}
                     <Textarea 
@@ -832,11 +848,11 @@ export function RequestView({ request }: RequestViewProps) {
                                 value={revisedDeadline}
                                 onChange={(e) => setRevisedDeadline(e.target.value)}
                                 min={new Date().toISOString().slice(0, 16)}
-                                max={divisionDeadline ? new Date(divisionDeadline).toISOString().slice(0, 16) : undefined}
+                                max={panelDivisionDeadline ? new Date(panelDivisionDeadline).toISOString().slice(0, 16) : undefined}
                             />
                             <p className="text-xs text-muted-foreground">
                                 Leave empty to keep the same deadline, or select an earlier date to reduce it.
-                                Current deadline: {divisionDeadline ? format(parseISO(divisionDeadline), 'PPP p') : 'Not set'}
+                                Current deadline: {panelDivisionDeadline ? format(parseISO(panelDivisionDeadline), 'PPP p') : 'Not set'}
                             </p>
                         </div>
                     )}
