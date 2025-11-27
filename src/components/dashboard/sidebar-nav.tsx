@@ -27,12 +27,7 @@ export function SidebarNav() {
             icon: FileText,
             roles: ['CEO NITI', 'PMO Viewer', 'State Advisor', 'State YP', 'Division HOD', 'Division YP'],
         },
-        {
-            href: '/dashboard/analytics',
-            label: 'Analytics',
-            icon: BarChart2,
-            roles: ['CEO NITI', 'PMO Viewer'],
-        },
+
         {
             href: '/dashboard/user-management',
             label: 'User Management',
