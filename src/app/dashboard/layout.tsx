@@ -43,7 +43,7 @@ export default function DashboardLayout({
 
   return (
     <SidebarProvider>
-        <div className="flex">
+        <div className="flex w-full">
             <Sidebar>
                 <SidebarHeader>
                 <div className="flex items-center justify-between gap-2">
