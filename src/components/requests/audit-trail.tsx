@@ -4,6 +4,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { USERS } from "@/lib/data";
 import { format, parseISO } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { 
+    CheckCircle2, 
+    FilePlus2, 
+    ArrowRightCircle, 
+    GitMerge, 
+    Send, 
+    FileText, 
+    AlertCircle,
+    Clock,
+    UserCircle
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface AuditTrailProps {
     auditTrail: AuditLog[];
@@ -15,6 +27,77 @@ const getInitials = (name: string) => {
       return `${names[0][0]}${names[1][0]}`;
     }
     return names[0].substring(0, 2);
+};
+
+const getActionConfig = (action: string) => {
+    const normalizedAction = action.toLowerCase();
+    
+    switch (normalizedAction) {
+        case 'created':
+            return {
+                label: 'Request Initiated',
+                icon: FilePlus2,
+                color: 'text-blue-500',
+                bgColor: 'bg-blue-500',
+                borderColor: 'border-blue-200'
+            };
+        case 'approved':
+            return {
+                label: 'Approved',
+                icon: CheckCircle2,
+                color: 'text-green-600',
+                bgColor: 'bg-green-600',
+                borderColor: 'border-green-200'
+            };
+        case 'rejected':
+            return {
+                label: 'Rejected',
+                icon: AlertCircle,
+                color: 'text-red-500',
+                bgColor: 'bg-red-500',
+                borderColor: 'border-red-200'
+            };
+        case 'forwarded':
+            return {
+                label: 'Forwarded',
+                icon: ArrowRightCircle,
+                color: 'text-indigo-500',
+                bgColor: 'bg-indigo-500',
+                borderColor: 'border-indigo-200'
+            };
+        case 'fanout':
+            return {
+                label: 'Distributed to Divisions',
+                icon: GitMerge,
+                color: 'text-purple-500',
+                bgColor: 'bg-purple-500',
+                borderColor: 'border-purple-200'
+            };
+        case 'submitted':
+            return {
+                label: 'Information Submitted',
+                icon: Send,
+                color: 'text-orange-500',
+                bgColor: 'bg-orange-500',
+                borderColor: 'border-orange-200'
+            };
+        case 'merged':
+            return {
+                label: 'Responses Merged',
+                icon: FileText,
+                color: 'text-teal-500',
+                bgColor: 'bg-teal-500',
+                borderColor: 'border-teal-200'
+            };
+        default:
+            return {
+                label: action.charAt(0).toUpperCase() + action.slice(1),
+                icon: Clock,
+                color: 'text-gray-500',
+                bgColor: 'bg-gray-500',
+                borderColor: 'border-gray-200'
+            };
+    }
 };
 
 export function AuditTrail({ auditTrail }: AuditTrailProps) {
@@ -61,33 +144,64 @@ export function AuditTrail({ auditTrail }: AuditTrailProps) {
 
     return (
         <Card>
-            <CardHeader>
-                <CardTitle>Audit Trail</CardTitle>
+            <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                    <Clock className="h-5 w-5 text-muted-foreground" />
+                    Request Timeline
+                </CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="relative pl-6">
-                    <div className="absolute left-0 top-0 bottom-0 w-px bg-border -translate-x-[11px]"></div>
+                <div className="relative pl-8 pt-2">
+                    {/* Continuous vertical line */}
+                    <div className="absolute left-[11px] top-2 bottom-6 w-0.5 bg-border"></div>
+                    
                     {auditTrail.slice().reverse().map((log, index) => {
                         const userDisplay = getUserDisplay(log);
+                        const config = getActionConfig(log.action);
+                        const ActionIcon = config.icon;
+                        
                         return (
-                            <div key={log.id} className="relative pb-8">
-                                <div className="absolute left-0 top-1.5 w-[11px] h-[11px] bg-primary rounded-full -translate-x-1/2 border-4 border-background"></div>
-                                <div className="flex items-start gap-3">
-                                    <Avatar className="h-8 w-8 mt-0.5">
-                                        <AvatarImage src={userDisplay.avatarUrl} alt={userDisplay.name} data-ai-hint="professional portrait" />
-                                        <AvatarFallback>{getInitials(userDisplay.name)}</AvatarFallback>
-                                    </Avatar>
-                                    <div className="flex-1">
-                                        <p className="text-sm font-medium">
-                                            {userDisplay.name}
-                                            <span className="text-muted-foreground font-normal"> ({userDisplay.role})</span>
-                                        </p>
-                                        <p className="text-sm text-primary font-semibold capitalize">{log.action}</p>
-                                        {log.notes && (
-                                            <p className="text-sm text-muted-foreground mt-1 p-2 bg-muted rounded-md border">{log.notes}</p>
-                                        )}
-                                        <p className="text-xs text-muted-foreground mt-1">{format(parseISO(log.timestamp), "PPP 'at' h:mm a")}</p>
+                            <div key={log.id} className="relative pb-8 last:pb-0 group">
+                                {/* Timeline Dot/Icon */}
+                                <div className={cn(
+                                    "absolute left-[-21px] top-1 h-8 w-8 rounded-full border-4 border-background flex items-center justify-center z-10 transition-colors duration-200",
+                                    config.bgColor,
+                                    "text-white"
+                                )}>
+                                    <ActionIcon className="h-3.5 w-3.5" />
+                                </div>
+
+                                <div className="flex flex-col gap-1.5 -mt-1">
+                                    {/* Header: Action & Time */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                                        <h4 className={cn("font-semibold text-base", config.color)}>
+                                            {config.label}
+                                        </h4>
+                                        <span className="text-xs text-muted-foreground font-medium bg-secondary/50 px-2 py-0.5 rounded-full w-fit">
+                                            {format(parseISO(log.timestamp), "MMM do, yyyy 'at' h:mm a")}
+                                        </span>
                                     </div>
+
+                                    {/* User Info */}
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <Avatar className="h-6 w-6">
+                                            <AvatarImage src={userDisplay.avatarUrl} alt={userDisplay.name} />
+                                            <AvatarFallback className="text-[10px] bg-muted text-muted-foreground">
+                                                {getInitials(userDisplay.name)}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div className="text-sm">
+                                            <span className="font-medium text-foreground">{userDisplay.name}</span>
+                                            <span className="text-muted-foreground"> • {userDisplay.role}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Notes / Context */}
+                                    {log.notes && (
+                                        <div className="mt-2 text-sm text-muted-foreground bg-muted/50 p-3 rounded-md border border-border/50 italic">
+                                            "{log.notes}"
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )
