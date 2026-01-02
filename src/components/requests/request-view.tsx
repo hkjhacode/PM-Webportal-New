@@ -19,6 +19,16 @@ import { detectDataInconsistencies } from "@/ai/flows/data-inconsistency-detecti
 import { Skeleton } from "../ui/skeleton";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 import { useRouter } from 'next/navigation';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface RequestViewProps {
     request: Request;
@@ -44,6 +54,15 @@ export function RequestView({ request }: RequestViewProps) {
     const [editedText, setEditedText] = useState(request.submittedData?.text || '');
     const [divisionForm, setDivisionForm] = useState<any>(null);
     const [isCheckingForm, setIsCheckingForm] = useState(false);
+    
+    // Confirmation Dialog State
+    const [confirmationOpen, setConfirmationOpen] = useState(false);
+    const [pendingAction, setPendingAction] = useState<{
+        type: 'action' | 'fanout' | 'saveEdit' | 'formAction';
+        params?: any;
+        title: string;
+        description: string;
+    } | null>(null);
     
     // Determine user's division if applicable (lifted to top scope for use in renderActionPanel)
     const userDivision = user?.roles?.find((role: any) => 
@@ -350,6 +369,58 @@ export function RequestView({ request }: RequestViewProps) {
         }
     };
 
+    const initiateAction = (type: 'action' | 'fanout' | 'saveEdit' | 'formAction', params: any, title: string, description: string) => {
+        setPendingAction({ type, params, title, description });
+        setConfirmationOpen(true);
+    };
+
+    const confirmAction = async () => {
+        if (!pendingAction) return;
+        
+        setConfirmationOpen(false); // Close immediately to prevent double clicks
+        
+        switch (pendingAction.type) {
+            case 'action':
+                await handleAction(pendingAction.params.action);
+                break;
+            case 'fanout':
+                await handleFanout();
+                break;
+            case 'saveEdit':
+                await handleSaveEdit();
+                break;
+            case 'formAction':
+                // Handle form approval/rejection logic here directly or call a separate handler
+                // For now, we'll inline the logic or create a separate handler if needed.
+                // But wait, the original code had inline logic in the button onClick.
+                // Let's refactor that slightly.
+                await handleFormAction(pendingAction.params.formId, pendingAction.params.action, pendingAction.params.notes);
+                break;
+        }
+        setPendingAction(null);
+    };
+
+    const handleFormAction = async (formId: string, action: string, notes: string) => {
+         try {
+            const res = await fetch(`/api/forms/${formId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ action, notes })
+            });
+            if (res.ok) {
+                toast({ title: `Form ${action === 'approve' ? 'Approved' : 'Declined'}`, description: `Form ${action === 'approve' ? 'approved' : 'declined'} successfully.` });
+                window.location.reload();
+            } else {
+                const data = await res.json();
+                const errorMsg = typeof data.error === 'string' ? data.error : (data.error?._errors ? data.error._errors.join(', ') : `Could not ${action} form.`);
+                toast({ variant: 'destructive', title: 'Action Failed', description: errorMsg });
+            }
+        } catch {
+            toast({ variant: 'destructive', title: 'Network Error', description: `Could not ${action} form.` });
+        }
+    };
+
     const handleGenerateBriefing = async () => {
         setIsBriefingLoading(true);
         setBriefingNote(null);
@@ -493,7 +564,7 @@ export function RequestView({ request }: RequestViewProps) {
                                 <Input id="files" type="file" multiple />
                             </div>
                              <div className="flex gap-2">
-                                <Button onClick={() => handleAction('submit')}>
+                                <Button onClick={() => initiateAction('action', { action: 'submit' }, 'Submit Information', 'Are you sure you want to submit this information? This cannot be undone.')}>
                                     <Send className="mr-2 h-4 w-4" /> Submit for Approval
                                 </Button>
                              </div>
@@ -561,7 +632,7 @@ export function RequestView({ request }: RequestViewProps) {
                                 </div>
                             )}
                             <div className="flex gap-2">
-                                <Button onClick={handleFanout} className="bg-accent hover:bg-accent/90 text-accent-foreground">
+                                <Button onClick={() => initiateAction('fanout', {}, 'Approve & Fanout', 'Are you sure you want to approve this request and distribute it to all divisions?')} className="bg-accent hover:bg-accent/90 text-accent-foreground">
                                     <ThumbsUp className="mr-2 h-4 w-4" /> Approve & Fanout to Divisions
                                 </Button>
                             </div>
@@ -612,10 +683,10 @@ export function RequestView({ request }: RequestViewProps) {
                             onChange={(e) => setActionNotes(e.target.value)}
                         />
                         <div className="flex gap-2">
-                            <Button onClick={() => handleAction('approve')} className="bg-accent hover:bg-accent/90 text-accent-foreground">
+                            <Button onClick={() => initiateAction('action', { action: 'approve' }, 'Merge & Forward', 'Are you sure you want to merge all responses and forward to State Advisor?')} className="bg-accent hover:bg-accent/90 text-accent-foreground">
                                 <Merge className="mr-2 h-4 w-4" /> Merge & Forward to State Advisor
                             </Button>
-                            <Button onClick={() => handleAction('decline&improve')} variant="destructive">
+                            <Button onClick={() => initiateAction('action', { action: 'decline&improve' }, 'Decline & Improve', 'Are you sure you want to decline this and ask for improvements?')} variant="destructive">
                                 <ThumbsDown className="mr-2 h-4 w-4" /> Decline & Improve
                             </Button>
                         </div>
@@ -698,51 +769,13 @@ export function RequestView({ request }: RequestViewProps) {
                             )}
                             <div className="flex gap-2">
                                 <Button 
-                                    onClick={async () => {
-                                        try {
-                                            const res = await fetch(`/api/forms/${divisionForm._id}`, {
-                                                method: 'PATCH',
-                                                headers: { 'Content-Type': 'application/json' },
-                                                credentials: 'include',
-                                                body: JSON.stringify({ action: 'approve', notes: actionNotes })
-                                            });
-                                            if (res.ok) {
-                                                toast({ title: 'Form Approved', description: 'Form approved and forwarded to State YP.' });
-                                                window.location.reload();
-                                            } else {
-                                                const data = await res.json();
-                                                const errorMsg = typeof data.error === 'string' ? data.error : (data.error?._errors ? data.error._errors.join(', ') : 'Could not approve form.');
-                                                toast({ variant: 'destructive', title: 'Approval Failed', description: errorMsg });
-                                            }
-                                        } catch {
-                                            toast({ variant: 'destructive', title: 'Network Error', description: 'Could not approve form.' });
-                                        }
-                                    }}
+                                    onClick={() => initiateAction('formAction', { formId: divisionForm._id, action: 'approve', notes: actionNotes }, 'Approve Form', 'Are you sure you want to approve this form and forward it?')}
                                     className="bg-accent hover:bg-accent/90 text-accent-foreground"
                                 >
                                     <ThumbsUp className="mr-2 h-4 w-4" /> Approve Form & Forward to State YP
                                 </Button>
                                 <Button 
-                                    onClick={async () => {
-                                        try {
-                                            const res = await fetch(`/api/forms/${divisionForm._id}`, {
-                                                method: 'PATCH',
-                                                headers: { 'Content-Type': 'application/json' },
-                                                credentials: 'include',
-                                                body: JSON.stringify({ action: 'reject', notes: actionNotes || 'Needs improvement' })
-                                            });
-                                            if (res.ok) {
-                                                toast({ title: 'Form Declined', description: 'Form declined and sent back to Division YP for improvement.' });
-                                                window.location.reload();
-                                            } else {
-                                                const data = await res.json();
-                                                const errorMsg = typeof data.error === 'string' ? data.error : (data.error?._errors ? data.error._errors.join(', ') : 'Could not decline form.');
-                                                toast({ variant: 'destructive', title: 'Decline Failed', description: errorMsg });
-                                            }
-                                        } catch {
-                                            toast({ variant: 'destructive', title: 'Network Error', description: 'Could not decline form.' });
-                                        }
-                                    }}
+                                    onClick={() => initiateAction('formAction', { formId: divisionForm._id, action: 'reject', notes: actionNotes || 'Needs improvement' }, 'Decline Form', 'Are you sure you want to decline this form?')}
                                     variant="destructive"
                                 >
                                     <ThumbsDown className="mr-2 h-4 w-4" /> Decline & Improve
@@ -796,7 +829,7 @@ export function RequestView({ request }: RequestViewProps) {
                                 </div>
                             )}
                             <div className="flex gap-2">
-                                <Button onClick={() => handleAction('approve')} className="bg-accent hover:bg-accent/90 text-accent-foreground">
+                                <Button onClick={() => initiateAction('action', { action: 'approve' }, 'Approve & Forward', 'Are you sure you want to approve this request and forward it to Division YP?')} className="bg-accent hover:bg-accent/90 text-accent-foreground">
                                     <ThumbsUp className="mr-2 h-4 w-4" /> Approve & Forward to Division YP
                                 </Button>
                             </div>
@@ -905,109 +938,126 @@ export function RequestView({ request }: RequestViewProps) {
     }
 
     return (
-        <div className="grid gap-6 lg:grid-cols-3">
-            <div className="lg:col-span-2 grid gap-6">
-                <Card>
-                    <CardHeader>
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <CardTitle className="text-2xl">{request.title}</CardTitle>
-                                <CardDescription>Request ID: {request.id}</CardDescription>
-                            </div>
-                            <Badge variant={getStatusVariant(request.status)}>{request.status}</Badge>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div><span className="font-semibold">State:</span> {request.state}</div>
-                            <div><span className="font-semibold">Division:</span> {request.division}</div>
-                            <div><span className="font-semibold">Created:</span> {format(parseISO(request.createdAt), 'PPP')}</div>
-                            <div>
-                                <span className="font-semibold">Due:</span> {format(parseISO(request.dueDate), 'PPP p')}
-                                {request.dueDate && (
-                                    <span className="ml-2 text-xs text-muted-foreground">
-                                        (Deadline set by previous user in workflow)
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                        <Separator />
-                        <p className="text-muted-foreground">{request.description}</p>
-                    </CardContent>
-                </Card>
+        <div className="space-y-6">
+            <AlertDialog open={confirmationOpen} onOpenChange={setConfirmationOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>{pendingAction?.title}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {pendingAction?.description}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmAction}>Confirm</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
-                {request.submittedData && (
+            <div className="grid gap-6 lg:grid-cols-3">
+                <div className="lg:col-span-2 grid gap-6">
                     <Card>
                         <CardHeader>
-                            <div className="flex justify-between items-center">
-                                <CardTitle>Submitted Information</CardTitle>
-                                {hasRole('Division HOD') && !isEditing && (
-                                    <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-                                        <Edit className="mr-2 h-4 w-4" /> Edit Document
-                                    </Button>
-                                )}
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <CardTitle className="text-2xl">{request.title}</CardTitle>
+                                    <CardDescription>Request ID: {request.id}</CardDescription>
+                                </div>
+                                <Badge variant={getStatusVariant(request.status)}>{request.status}</Badge>
                             </div>
                         </CardHeader>
-                        <CardContent>
-                            {isSummaryLoading ? (
-                                <div className="space-y-2">
-                                    <Skeleton className="h-4 w-full" />
-                                    <Skeleton className="h-4 w-full" />
-                                    <Skeleton className="h-4 w-3/4" />
+                        <CardContent className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div><span className="font-semibold">State:</span> {request.state}</div>
+                                <div><span className="font-semibold">Division:</span> {request.division}</div>
+                                <div><span className="font-semibold">Created:</span> {format(parseISO(request.createdAt), 'PPP')}</div>
+                                <div>
+                                    <span className="font-semibold">Due:</span> {format(parseISO(request.dueDate), 'PPP p')}
+                                    {request.dueDate && (
+                                        <span className="ml-2 text-xs text-muted-foreground">
+                                            (Deadline set by previous user in workflow)
+                                        </span>
+                                    )}
                                 </div>
-                            ) : (
-                                summary && (
-                                    <div className="mb-4 p-3 border rounded-md bg-muted/50 text-sm">
-                                        <p className="font-semibold text-primary mb-2">AI Summary</p>
-                                        <p className="text-muted-foreground">{summary}</p>
-                                    </div>
-                                )
-                            )}
-                            {isEditing ? (
-                                <div className="space-y-4">
-                                    <Textarea 
-                                        value={editedText}
-                                        onChange={(e) => setEditedText(e.target.value)}
-                                        rows={10}
-                                        className="font-mono text-sm"
-                                    />
-                                    <div className="flex gap-2">
-                                        <Button onClick={handleSaveEdit} size="sm">
-                                            <Save className="mr-2 h-4 w-4" /> Save Changes
-                                        </Button>
-                                        <Button onClick={() => { setIsEditing(false); setEditedText(request.submittedData?.text || ''); }} variant="outline" size="sm">
-                                            <X className="mr-2 h-4 w-4" /> Cancel
-                                        </Button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <p className="whitespace-pre-wrap">{request.submittedData.text}</p>
-                            )}
-                            {request.submittedData.files && request.submittedData.files.length > 0 && (
-                                <div className="mt-4">
-                                    <h4 className="font-semibold mb-2">Attached Files:</h4>
-                                    <ul className="space-y-2">
-                                        {request.submittedData.files.map(file => (
-                                            <li key={file} className="flex items-center">
-                                                <Button variant="link" className="p-0 h-auto">
-                                                    <Paperclip className="mr-2 h-4 w-4 text-muted-foreground" />
-                                                    {file}
-                                                </Button>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
+                            </div>
+                            <Separator />
+                            <p className="text-muted-foreground">{request.description}</p>
                         </CardContent>
                     </Card>
-                )}
 
-                {renderActionPanel()}
-                {renderAIPanels()}
-            </div>
-            
-            <div className="lg:col-span-1">
-                <AuditTrail auditTrail={request.auditTrail} />
+                    {request.submittedData && (
+                        <Card>
+                            <CardHeader>
+                                <div className="flex justify-between items-center">
+                                    <CardTitle>Submitted Information</CardTitle>
+                                    {hasRole('Division HOD') && !isEditing && (
+                                        <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                                            <Edit className="mr-2 h-4 w-4" /> Edit Document
+                                        </Button>
+                                    )}
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                {isSummaryLoading ? (
+                                    <div className="space-y-2">
+                                        <Skeleton className="h-4 w-full" />
+                                        <Skeleton className="h-4 w-full" />
+                                        <Skeleton className="h-4 w-3/4" />
+                                    </div>
+                                ) : (
+                                    summary && (
+                                        <div className="mb-4 p-3 border rounded-md bg-muted/50 text-sm">
+                                            <p className="font-semibold text-primary mb-2">AI Summary</p>
+                                            <p className="text-muted-foreground">{summary}</p>
+                                        </div>
+                                    )
+                                )}
+                                {isEditing ? (
+                                    <div className="space-y-4">
+                                        <Textarea 
+                                            value={editedText}
+                                            onChange={(e) => setEditedText(e.target.value)}
+                                            rows={10}
+                                            className="font-mono text-sm"
+                                        />
+                                        <div className="flex gap-2">
+                                            <Button onClick={handleSaveEdit} size="sm">
+                                                <Save className="mr-2 h-4 w-4" /> Save Changes
+                                            </Button>
+                                            <Button onClick={() => { setIsEditing(false); setEditedText(request.submittedData?.text || ''); }} variant="outline" size="sm">
+                                                <X className="mr-2 h-4 w-4" /> Cancel
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="whitespace-pre-wrap">{request.submittedData.text}</p>
+                                )}
+                                {request.submittedData.files && request.submittedData.files.length > 0 && (
+                                    <div className="mt-4">
+                                        <h4 className="font-semibold mb-2">Attached Files:</h4>
+                                        <ul className="space-y-2">
+                                            {request.submittedData.files.map(file => (
+                                                <li key={file} className="flex items-center">
+                                                    <Button variant="link" className="p-0 h-auto">
+                                                        <Paperclip className="mr-2 h-4 w-4 text-muted-foreground" />
+                                                        {file}
+                                                    </Button>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {renderActionPanel()}
+                    {renderAIPanels()}
+                </div>
+                
+                <div className="lg:col-span-1">
+                    <AuditTrail auditTrail={request.auditTrail} />
+                </div>
             </div>
         </div>
     );
