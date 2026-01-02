@@ -1,0 +1,80 @@
+=============================================
+VISITWISE - LOGIN CREDENTIALS & WORKFLOW GUIDE
+=============================================
+
+---------------------------------------------
+1. LOGIN CREDENTIALS
+---------------------------------------------
+
+| Role             | Email                | Password     |
+| :--------------- | :------------------- | :----------- |
+| PMO Viewer       | pmo@gov.in           | PMO@123      |
+| CEO NITI         | ceo.niti@gov.in      | Ceo@123      |
+| State Advisor    | harsh@niti.gov.in    | jT2akJML35   |
+| State YP         | harsh2@niti.gov.in   | j05cmgkF8W   |
+| Division HOD     | harsh3@niti.gov.in   | kQgnaAsk5t   |
+| Division YP      | harsh4@niti.gov.in   | 0aBhmmaBmb   |
+| Super Admin      | superadmin@gov.in    | Admin@123    |
+| Rajasthan State Advisor | rajasthanstateadvisor@niti.gov.in | xRfA5EdtIM |
+| Rajasthan State YP | rajasthanstateyp@niti.gov.in | bXZ8a9Fsfk |
+| Rajasthan Division HOD Finance | rajasthan.hod@niti.gov.in | 0aBhmmaBmb |
+| Rajasthan Division YP | rajasthandivisionyp@niti.gov.in | 0aBhmmaBmb |
+---------------------------------------------
+2. END-TO-END WORKFLOW GUIDE
+---------------------------------------------
+
+Follow this sequence to test the full lifecycle of a request:
+
+STEP 1: CREATE REQUEST (PMO)
+- Login: pmo@gov.in
+- Action: Click "New Request".
+- Fill: Title (e.g., "School Inspection"), Description, Due Date.
+- Select: State: "Delhi", Division: "Education".
+- Submit.
+- Status: Pending CEO Review
+
+STEP 2: APPROVE REQUEST (CEO)
+- Login: ceo.niti@gov.in
+- Action: You will see the request in your dashboard. Click "View Details".
+- Action: Click "Approve & Forward".
+- Status: Pending State Advisor
+
+STEP 3: FORWARD TO STATE TEAM (State Advisor)
+- Login: harsh@niti.gov.in
+- Action: View Details -> "Approve & Forward".
+- Status: Pending State YP
+
+STEP 4: FANOUT TO DIVISIONS (State YP)
+- Login: harsh2@niti.gov.in
+- Action: View Details -> "Approve & Fanout to Divisions".
+- Status: Pending Division HOD (The request is now sent to the Education division).
+
+STEP 5: APPROVE FOR FIELD WORK (Division HOD)
+- Login: harsh3@niti.gov.in
+- Action: View Details -> "Approve & Forward to Division YP".
+- Status: Pending Division YP
+
+STEP 6: SUBMIT DATA (Division YP)
+- Login: harsh4@niti.gov.in
+- Action: View Details. You will see a "Submit Information" panel.
+- Action: Fill out the form (enter text, mock data). Click "Submit".
+- Status: Pending Division HOD Approval
+
+STEP 7: REVIEW SUBMISSION (Division HOD)
+- Login: harsh3@niti.gov.in
+- Action: View Details. You will see the submitted data.
+- Action: Click "Approve Form & Forward to State YP".
+
+STEP 8: MERGE & FINALIZE (State YP)
+- Login: harsh2@niti.gov.in
+- Action: View Details. You will see submissions from divisions.
+- Action: Click "Merge & Forward to State Advisor".
+
+STEP 9: FINAL REVIEW (State Advisor)
+- Login: harsh@niti.gov.in
+- Action: View Details -> "Approve & Close".
+- Status: Completed
+
+STEP 10: VIEW FINAL REPORT (PMO/CEO)
+- Login: pmo@gov.in or ceo.niti@gov.in
+- Action: View Details. You can now see the completed request with all the data.

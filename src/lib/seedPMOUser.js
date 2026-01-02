@@ -68,6 +68,12 @@ async function seedPMOUser() {
           { role: 'State Advisor', state: 'Gujarat' }
         ],
       },
+      {
+        email: 'superadmin@gov.in',
+        password: 'Admin@123',
+        name: 'System Administrator',
+        roles: [{ role: 'Super Admin' }],
+      },
     ];
 
     for (const demoUser of demoUsers) {
@@ -96,6 +102,7 @@ async function seedPMOUser() {
     console.log('   PMO Viewer: pmo@gov.in / PMO@123');
     console.log('   CEO NITI: ceo.niti@gov.in / Ceo@123');
     console.log('   State Advisor: advisor.up@gov.in / Advisor@123');
+    console.log('   Super Admin: superadmin@gov.in / Admin@123');
   } catch (error) {
     console.error('❌ Error seeding users:', error);
     try { await mongoose.connection.close(); } catch {}

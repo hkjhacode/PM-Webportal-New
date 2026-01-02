@@ -32,8 +32,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import NewRequestDialog from '../requests/new-request-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import dynamic from 'next/dynamic';
+
+const NewRequestDialog = dynamic(() => import('../requests/new-request-dialog'), {
+  loading: () => <Button size="sm" disabled>Loading...</Button>,
+  ssr: false
+});
 
 type FilterType = 'all' | 'approvals' | 'allocations';
 

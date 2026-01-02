@@ -1,5 +1,4 @@
 'use client';
-import { RequestView } from "@/components/requests/request-view";
 import { REQUESTS } from "@/lib/data";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -7,6 +6,17 @@ import { use, useState, useEffect } from "react";
 import { Request } from "@/types";
 import { formatISO } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
+import dynamic from 'next/dynamic';
+
+const RequestView = dynamic(() => import("@/components/requests/request-view").then(mod => mod.RequestView), {
+  loading: () => (
+    <div className="flex flex-col gap-6">
+      <Skeleton className="h-8 w-64" />
+      <Skeleton className="h-64 w-full" />
+    </div>
+  ),
+  ssr: false
+});
 
 // Transform API response to Request type
 function transformApiRequest(apiReq: any): Request {

@@ -1,10 +1,25 @@
 
 'use client';
 import { useAuth } from "@/hooks/use-auth";
-import UnifiedDashboard from "@/components/dashboard/unified-dashboard";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import UserManagementPage from "./user-management/page";
+import dynamic from 'next/dynamic';
+import { Skeleton } from "@/components/ui/skeleton";
+
+const UnifiedDashboard = dynamic(() => import("@/components/dashboard/unified-dashboard"), {
+  loading: () => (
+    <div className="space-y-4">
+      <Skeleton className="h-[200px] w-full rounded-xl" />
+      <div className="space-y-2">
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-12 w-full" />
+      </div>
+    </div>
+  ),
+  ssr: false // Disable SSR for dashboard as it relies heavily on client-side auth
+});
 
 export default function Dashboard() {
   const { user, hasRole, initialized } = useAuth();
