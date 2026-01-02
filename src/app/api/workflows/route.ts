@@ -165,6 +165,14 @@ export async function GET(req: NextRequest) {
       })
       .sort({ timeline: 1 })
       .limit(50);
+    
+    const resultLog = `Found ${items.length} items. IDs: ${items.map(i => i._id).join(', ')}\n`;
+    try {
+        fs.appendFileSync(logPath, resultLog);
+    } catch (e) {
+        console.error('Failed to write result log', e);
+    }
+
     console.log(`✅ Retrieved ${items.length} requests from MongoDB`);
     return NextResponse.json(items);
   } catch (error: any) {
