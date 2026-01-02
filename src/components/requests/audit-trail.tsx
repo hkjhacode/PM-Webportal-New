@@ -142,6 +142,39 @@ export function AuditTrail({ auditTrail }: AuditTrailProps) {
         };
     };
 
+    const formatTextWithDates = (text: string) => {
+        // Regex to match ISO 8601 dates (e.g., 2026-01-09T18:30:00.000Z)
+        const isoDateRegex = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z/g;
+        
+        const parts = [];
+        let lastIndex = 0;
+        let match;
+
+        while ((match = isoDateRegex.exec(text)) !== null) {
+            // Add text before the date
+            if (match.index > lastIndex) {
+                parts.push(text.slice(lastIndex, match.index));
+            }
+            
+            // Format and add the date
+            try {
+                const date = parseISO(match[0]);
+                parts.push(format(date, "MMM do, yyyy 'at' h:mm a"));
+            } catch {
+                parts.push(match[0]); // Fallback if parsing fails
+            }
+            
+            lastIndex = isoDateRegex.lastIndex;
+        }
+        
+        // Add remaining text
+        if (lastIndex < text.length) {
+            parts.push(text.slice(lastIndex));
+        }
+        
+        return parts.length > 0 ? parts.join('') : text;
+    };
+
     return (
         <Card>
             <CardHeader className="pb-3">
@@ -151,9 +184,9 @@ export function AuditTrail({ auditTrail }: AuditTrailProps) {
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="relative pl-8 pt-2">
+                <div className="relative pl-12 pt-2">
                     {/* Continuous vertical line */}
-                    <div className="absolute left-[11px] top-2 bottom-6 w-0.5 bg-border"></div>
+                    <div className="absolute left-[23px] top-2 bottom-6 w-0.5 bg-border"></div>
                     
                     {auditTrail.slice().reverse().map((log, index) => {
                         const userDisplay = getUserDisplay(log);
@@ -164,7 +197,7 @@ export function AuditTrail({ auditTrail }: AuditTrailProps) {
                             <div key={log.id} className="relative pb-8 last:pb-0 group">
                                 {/* Timeline Dot/Icon */}
                                 <div className={cn(
-                                    "absolute left-[-21px] top-1 h-8 w-8 rounded-full border-4 border-background flex items-center justify-center z-10 transition-colors duration-200",
+                                    "absolute left-[-40px] top-1 h-8 w-8 rounded-full border-4 border-background flex items-center justify-center z-10 transition-colors duration-200",
                                     config.bgColor,
                                     "text-white"
                                 )}>
@@ -199,7 +232,7 @@ export function AuditTrail({ auditTrail }: AuditTrailProps) {
                                     {/* Notes / Context */}
                                     {log.notes && (
                                         <div className="mt-2 text-sm text-muted-foreground bg-muted/50 p-3 rounded-md border border-border/50 italic">
-                                            "{log.notes}"
+                                            "{formatTextWithDates(log.notes)}"
                                         </div>
                                     )}
                                 </div>
