@@ -108,11 +108,24 @@ export async function GET(req: NextRequest) {
     const userState = user.state || (user.roles?.[0] as any)?.state;
     const userDivision = user.branch || (user.roles?.[0] as any)?.branch;
     
-    if (userRoles.includes('Division HOD') || userRoles.includes('Division YP')) {
-      // Filter requests where this division is assigned
-      if (userState && userDivision) {
-        q['divisionAssignments.division'] = userDivision;
-        q['targets.states'] = userState;
+    // Global viewers (PMO, CEO, Super Admin) see everything
+    const isGlobalViewer = userRoles.some((r: string) => ['Super Admin', 'PMO Viewer', 'CEO NITI'].includes(r));
+    
+    if (!isGlobalViewer) {
+      // State-level filtering for State Advisor and State YP
+      if (userRoles.includes('State Advisor') || userRoles.includes('State YP')) {
+        if (userState) {
+          q['targets.states'] = userState;
+        }
+      }
+
+      // Division-level filtering for Division HOD and Division YP
+      if (userRoles.includes('Division HOD') || userRoles.includes('Division YP')) {
+        // Filter requests where this division is assigned
+        if (userState && userDivision) {
+          q['divisionAssignments.division'] = userDivision;
+          q['targets.states'] = userState;
+        }
       }
     }
     
