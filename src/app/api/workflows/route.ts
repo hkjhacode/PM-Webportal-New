@@ -133,12 +133,14 @@ export async function GET(req: NextRequest) {
         q['$or'] = orConditions;
       } else {
         // If user has no relevant roles/permissions, return empty result
-        // (unless they have some other role not covered here, but strictly speaking we should restrict)
-        // For safety, if not global viewer and no conditions matched, force no results
+        console.log('❌ User has no relevant roles for filtering, returning empty array');
         return NextResponse.json([]);
       }
     }
     
+    console.log('🔍 Workflow Query:', JSON.stringify(q, null, 2));
+    console.log('👤 User Roles:', JSON.stringify(user.roles, null, 2));
+
     const items = await WorkflowRequest.find(q)
       .populate('currentAssigneeId', 'roles email name')
       .populate('createdBy', 'email name roles')
