@@ -890,11 +890,11 @@ export function RequestView({ request }: RequestViewProps) {
                         </div>
                     )}
                     <div className="flex gap-2">
-                        <Button onClick={() => handleAction('approve')} className="bg-accent hover:bg-accent/90 text-accent-foreground">
+                        <Button onClick={() => initiateAction('action', { action: 'approve' }, 'Approve Request', 'Are you sure you want to approve this request?')} className="bg-accent hover:bg-accent/90 text-accent-foreground">
                             <ThumbsUp className="mr-2 h-4 w-4" /> Approve & Forward
                         </Button>
                         {canDecline && (
-                            <Button onClick={() => handleAction('decline&improve')} variant="destructive">
+                            <Button onClick={() => initiateAction('action', { action: 'decline&improve' }, 'Decline Request', 'Are you sure you want to decline this request and ask for improvements?')} variant="destructive">
                                 <ThumbsDown className="mr-2 h-4 w-4" /> Decline & Improve
                             </Button>
                         )}
