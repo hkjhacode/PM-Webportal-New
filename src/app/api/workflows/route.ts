@@ -104,6 +104,7 @@ export async function GET(req: NextRequest) {
     if (state) q['targets.states'] = state;
     
     // Global viewers (PMO, CEO, Super Admin) see everything
+    const userRoles = (user.roles || []).map((r: any) => r.role);
     const isGlobalViewer = userRoles.some((r: string) => ['Super Admin', 'PMO Viewer', 'CEO NITI'].includes(r));
     
     if (!isGlobalViewer) {
@@ -138,8 +139,15 @@ export async function GET(req: NextRequest) {
       }
     }
     
-    console.log('🔍 Workflow Query:', JSON.stringify(q, null, 2));
-    console.log('👤 User Roles:', JSON.stringify(user.roles, null, 2));
+    const fs = await import('fs');
+    const path = await import('path');
+    const logPath = path.join(process.cwd(), 'debug.log');
+    const logEntry = `\n[${new Date().toISOString()}] User: ${user.email} (${user._id})\nRoles: ${JSON.stringify(user.roles)}\nQuery: ${JSON.stringify(q)}\n`;
+    try {
+        fs.appendFileSync(logPath, logEntry);
+    } catch (e) {
+        console.error('Failed to write to debug log', e);
+    }
 
     const items = await WorkflowRequest.find(q)
       .populate('currentAssigneeId', 'roles email name')
