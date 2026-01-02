@@ -103,29 +103,39 @@ export async function GET(req: NextRequest) {
     if (status) q.status = status;
     if (state) q['targets.states'] = state;
     
-    // Filter by division for Division HOD and Division YP
-    const userRoles = (user.roles || []).map((r: any) => r.role);
-    const userState = user.state || (user.roles?.[0] as any)?.state;
-    const userDivision = user.branch || (user.roles?.[0] as any)?.branch;
-    
     // Global viewers (PMO, CEO, Super Admin) see everything
     const isGlobalViewer = userRoles.some((r: string) => ['Super Admin', 'PMO Viewer', 'CEO NITI'].includes(r));
     
     if (!isGlobalViewer) {
-      // State-level filtering for State Advisor and State YP
-      if (userRoles.includes('State Advisor') || userRoles.includes('State YP')) {
-        if (userState) {
-          q['targets.states'] = userState;
-        }
-      }
+      const orConditions: any[] = [];
 
-      // Division-level filtering for Division HOD and Division YP
-      if (userRoles.includes('Division HOD') || userRoles.includes('Division YP')) {
-        // Filter requests where this division is assigned
-        if (userState && userDivision) {
-          q['divisionAssignments.division'] = userDivision;
-          q['targets.states'] = userState;
+      // Iterate through all user roles to build permissions
+      (user.roles || []).forEach((roleAssignment: any) => {
+        const role = roleAssignment.role;
+        const state = roleAssignment.state;
+        const division = roleAssignment.division || roleAssignment.branch; // Handle both naming conventions if present
+
+        // State Advisor / State YP: Can see all requests for their assigned state
+        if ((role === 'State Advisor' || role === 'State YP') && state) {
+          orConditions.push({ 'targets.states': state });
         }
+
+        // Division HOD / Division YP: Can see requests for their specific division in their state
+        if ((role === 'Division HOD' || role === 'Division YP') && state && division) {
+          orConditions.push({
+            'targets.states': state,
+            'divisionAssignments.division': division
+          });
+        }
+      });
+
+      if (orConditions.length > 0) {
+        q['$or'] = orConditions;
+      } else {
+        // If user has no relevant roles/permissions, return empty result
+        // (unless they have some other role not covered here, but strictly speaking we should restrict)
+        // For safety, if not global viewer and no conditions matched, force no results
+        return NextResponse.json([]);
       }
     }
     
